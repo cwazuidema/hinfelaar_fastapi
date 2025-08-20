@@ -38,6 +38,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 Open interactive docs: `http://localhost:8000/docs`
 
+## App lifecycle (lifespan)
+
+FastAPI's `on_event` startup/shutdown hooks are deprecated. This project uses FastAPI's lifespan context instead. Startup tasks (including Tortoise initialization via `register_tortoise` and the idempotent creation of the JSONB GIN index) run inside the app's lifespan in `app/main.py`.
+
+- If you need custom startup/shutdown work, add it to the lifespan context in `app/main.py` around the `yield`. Code before `yield` runs on startup; code after `yield` runs on shutdown.
+
 ## PostgreSQL roles and permissions
 
 When working locally you may want a single app user that can run migrations and manage objects. In production, avoid superuser and prefer a least‑privilege split between a migrator role and a runtime role.
@@ -156,9 +162,45 @@ aerich upgrade
 Notes:
 
 - Ensure your PostgreSQL user/database matches the hardcoded credentials in `app/models/__init__.py` for now.
-- The `aerich init` command will create an `aerich.ini` and a `migrations` directory.
+- This project configures Aerich via `[tool.aerich]` in `pyproject.toml` (see below). If you run `aerich init -t app.models.TORTOISE_ORM`, Aerich will create an `aerich.ini` by default; you can ignore/delete it and keep using `pyproject.toml`. Ensure the `migrations` directory exists at the path in `pyproject.toml` (`./migrations`).
 - In prototype mode, `generate_schemas` is enabled. When your schema stabilizes, run `aerich init-db` to create a baseline and then set `generate_schemas=False` to move to migrations-only.
 - If you add new model modules, include them in `TORTOISE_ORM["apps"]["models"]["models"]` in `app/models/__init__.py` (e.g., `"app.models.checklist"`, `"app.models.rating"`).
+
+## pyproject.toml (Aerich configuration)
+
+`pyproject.toml` at the repo root contains the Aerich configuration for this project so we don't need a separate `aerich.ini`.
+
+Current config:
+
+```toml
+[tool.aerich]
+tortoise_orm = "app.models.TORTOISE_ORM"
+location = "./migrations"
+src_folder = "./."
+```
+
+How it is used:
+
+- Aerich commands (`aerich init-db`, `aerich migrate`, `aerich upgrade`) read the `[tool.aerich]` section automatically.
+- `tortoise_orm` points to the Tortoise settings dict path inside `app/models/__init__.py`.
+- `location` is where migrations are stored (`./migrations`).
+
+How to create or recreate it:
+
+- Option A (manual, recommended here):
+  1) Create `pyproject.toml` at the repo root with the `[tool.aerich]` block above.
+  2) Ensure the migrations directory exists: `mkdir -p migrations`.
+  3) Initialize the database baseline: `aerich init-db`.
+
+- Option B (using Aerich init):
+  1) Run `aerich init -t app.models.TORTOISE_ORM`.
+  2) This creates an `aerich.ini` and a migrations directory. Copy the values into `pyproject.toml` if you prefer centralizing config, then delete `aerich.ini`.
+  3) Proceed with `aerich init-db`, `aerich migrate`, `aerich upgrade` as usual.
+
+Changing settings later:
+
+- To move migrations, update `location` and move the existing folder.
+- If you rename or relocate models modules, update `tortoise_orm` and the `models` list inside that dict in `app/models/__init__.py`.
 
 ### Django → Tortoise migration tips
 
