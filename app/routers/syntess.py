@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Request
+from datetime import datetime
 
 from app.schemas.syntess import LoginRequest, SyntessLoginCookies
-from app.services.syntess_service import perform_syntess_login
+from app.services.syntess_service import perform_syntess_login, work_order_request
 
 
 router = APIRouter()
@@ -37,3 +38,26 @@ def syntess_login(body: LoginRequest, response: Response) -> SyntessLoginCookies
         _set_cookie_if_present(response, cookie_name, getattr(cookies, attr))
 
     return cookies
+
+
+@router.post("/get-session-records")
+def get_session_records(request: Request):
+    print("get_session_records", request.cookies)
+
+    json_payload = {
+        "parameters": {
+            "method": "GetSessieRecords",
+            "zoekWaarde": "",
+            "zoekVelden": [],
+            "fromIndex": 0,
+            "pageSize": 500,
+            "datumVandaagClient": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        },
+    }
+    
+    result = work_order_request("GetSessieRecords", json_payload, request.cookies)
+    
+    if not result.get("success", False):
+        raise HTTPException(status_code=result.get("status", 500), detail=result)
+    
+    return result
