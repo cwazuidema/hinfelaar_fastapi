@@ -1,16 +1,16 @@
 from fastapi import APIRouter
 
-from app.schemas.syntess import LoginRequest, SyntessLoginCookies
+from app.schemas.syntess.auth.login import LoginRequest, SyntessCookies
 from app.services.syntess.auth.login import syntess_login
 
 router = APIRouter()
 
 
-@router.post("/login", response_model=SyntessLoginCookies)
-def login(body: LoginRequest) -> SyntessLoginCookies:
+@router.post("/login", response_model=dict)
+async def login(body: LoginRequest) -> dict:
     print("syntess_login", body)
 
-    cookies = syntess_login(body)
+    cookies = await syntess_login(body)
     print("cookies", cookies)
 
-    return 
+    return cookies

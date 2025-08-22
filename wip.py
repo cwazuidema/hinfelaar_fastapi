@@ -1,21 +1,34 @@
-from app.services.syntess_service import syntess_request
+from app.services.syntess.auth.login import syntess_login, get_cookies_with_login, get_asp_auth_cookie
 from app.core.constants.headers import LOGIN_HEADERS
+from app.schemas.syntess.auth.login import LoginRequest
 import asyncio
 
+login_request = LoginRequest(username="TH", password="TH")
 
-async def get_syntess_cookies():
-    endpoint = "Forms/Public/Login.aspx/ExecuteWebMethod"
-    get_administraties_payload = {
-        "parameters": {
-            "method": "GetAdministraties",
-            "username": "TH",
-            "password": "TH",
-        }
-    }
-    response = await syntess_request(
-        endpoint, LOGIN_HEADERS, get_administraties_payload, None
-    )
-    return response
+cookies = asyncio.run(syntess_login(login_request))
+
+
+
+login_request = LoginRequest(username="TH", password="TH")
+
+cookies = asyncio.run(get_cookies_with_login(login_request))
+
+print(cookies)
+
+asp_auth_cookie = asyncio.run(get_asp_auth_cookie(cookies))
+# async def get_syntess_cookies():
+#     endpoint = "Forms/Public/Login.aspx/ExecuteWebMethod"
+#     get_administraties_payload = {
+#         "parameters": {
+#             "method": "GetAdministraties",
+#             "username": "TH",
+#             "password": "TH",
+#         }
+#     }
+#     response = await syntess_login_request(
+#         endpoint, LOGIN_HEADERS, get_administraties_payload, None
+#     )
+#     return response
 
 
 cookies = asyncio.run(get_syntess_cookies())

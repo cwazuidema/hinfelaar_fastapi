@@ -8,56 +8,76 @@ from app.services.syntess.auth.login import syntess_login
 router = APIRouter()
 
 
-def _set_cookie_if_present(response: Response, name: str, value: str | None) -> None:
-    if value:
-        response.set_cookie(
-            name,
-            value,
-            httponly=True,
-            secure=True,
-            samesite="Strict",
-        )
-
-
-COOKIE_MAP = [
-    ("syntess_auth", "aspx_auth_cookie"),
-    ("atrium_session", "atrium_session"),
-    ("userinfo", "userinfo"),
-    ("uq_token", "uq_token"),
-]
-
-
 @router.post("/login")
-def login(body: LoginRequest, response: Response) -> dict:
+async def login(body: LoginRequest, response: Response) -> dict:
     print("syntess_login", body)
 
-    cookies = syntess_login(body)
+    cookies = await syntess_login(body)
     print("cookies", cookies)
 
-    for cookie_name, attr in COOKIE_MAP:
-        _set_cookie_if_present(response, cookie_name, getattr(cookies, attr))
+    # Map Syntess cookie aliases to our app's cookie names and set them on the response
+    aspxauth_cookie = cookies.get('syntess_auth')
+    atrium_session = cookies.get("atrium_session")
+    userinfo = cookies.get("userinfo")
+    uq_token = cookies.get("uq_token")
 
-    return cookies
+    if aspxauth_cookie:
+        response.set_cookie(
+            key="syntess_auth",
+            value=aspxauth_cookie,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+        )
+
+    if atrium_session:
+        response.set_cookie(
+            key="atrium_session",
+            value=atrium_session,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+        )
+
+    if userinfo:
+        response.set_cookie(
+            key="userinfo",
+            value=userinfo,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+        )
+
+    if uq_token:
+        response.set_cookie(
+            key="uq_token",
+            value=uq_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+        )
+
+    return {"message": "Login successful"}
 
 
-@router.post("/get-session-records")
-def get_session_records(request: Request):
-    print("get_session_records", request.cookies)
+# @router.post("/get-session-records")
+# def get_session_records(request: Request):
+#     print("get_session_records", request.cookies)
 
-    json_payload = {
-        "parameters": {
-            "method": "GetSessieRecords",
-            "zoekWaarde": "",
-            "zoekVelden": [],
-            "fromIndex": 0,
-            "pageSize": 500,
-            "datumVandaagClient": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        },
-    }
-    
-    result = work_order_request("GetSessieRecords", json_payload, request.cookies)
-    
-    if not result.get("success", False):
-        raise HTTPException(status_code=result.get("status", 500), detail=result)
-    
-    return result
+#     json_payload = {
+#         "parameters": {
+#             "method": "GetSessieRecords",
+#             "zoekWaarde": "",
+#             "zoekVelden": [],
+#             "fromIndex": 0,
+#             "pageSize": 500,
+#             "datumVandaagClient": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+#         },
+#     }
+
+#     result = work_order_request("GetSessieRecords", json_payload, request.cookies)
+
+#     if not result.get("success", False):
+#         raise HTTPException(status_code=result.get("status", 500), detail=result)
+
+#     return result
