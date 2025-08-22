@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Response, Request
 from datetime import datetime
 
-from app.schemas.syntess import LoginRequest, SyntessLoginCookies
-from app.services.syntess_service import perform_syntess_login, work_order_request
+from app.schemas.syntess.auth.login import LoginRequest
+from app.services.syntess.auth.login import syntess_login
 
 
 router = APIRouter()
@@ -27,11 +27,11 @@ COOKIE_MAP = [
 ]
 
 
-@router.post("/login", response_model=SyntessLoginCookies)
-def syntess_login(body: LoginRequest, response: Response) -> SyntessLoginCookies:
+@router.post("/login")
+def login(body: LoginRequest, response: Response) -> dict:
     print("syntess_login", body)
 
-    cookies = perform_syntess_login(body)
+    cookies = syntess_login(body)
     print("cookies", cookies)
 
     for cookie_name, attr in COOKIE_MAP:
